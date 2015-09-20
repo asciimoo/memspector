@@ -12,7 +12,7 @@ def read(*rnames):
 
 setup(
     name='memspector',
-    version='0.1.0',
+    version='0.1.2',
     description="Inspect memory usage of python functions",
     long_description=read('README.rst'),
     classifiers=[

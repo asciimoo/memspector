@@ -1,5 +1,9 @@
 from memspector import Memspector, MAIN_THREAD_NAME
 import unittest
+from datetime import datetime
+
+
+messages = []
 
 
 class TestMemspector(unittest.TestCase):
@@ -36,10 +40,50 @@ t2.join()
         self.assertEqual(len(ms.memdata._diffs), 3)
 
     def test_exclude_all(self):
-        ms = Memspector(['.*'])
+        ms = Memspector(exclude_patterns=['.*'])
         ms.spectate('1+1')
+        self.assertEqual(len(ms.memdata._diffs), 0)
+
+    def test_multiple_calls(self):
+        ms = Memspector(enable_gc=True)
+        time_before = datetime.now()
+        ms.spectate('''
+def a(): return
+for _ in xrange(1000):
+    a()
+''')
+        time_after = datetime.now()
+        messages.append('Execution time of 1000 function calls with gc: {0}'
+                        .format(time_after - time_before))
+        self.assertEqual(len(ms.memdata._diffs[MAIN_THREAD_NAME]['<string>:a()']), 1000)
+
+    def test_multiple_calls_with_gc(self):
+        ms = Memspector()
+        time_before = datetime.now()
+        ms.spectate('''
+def a(): return
+for _ in xrange(1000):
+    a()
+''')
+        time_after = datetime.now()
+        messages.append('Execution time of 1000 function calls: {0}'
+                        .format(time_after - time_before))
+        self.assertEqual(len(ms.memdata._diffs[MAIN_THREAD_NAME]['<string>:a()']), 1000)
+
+    def test_multiple_skipped_calls(self):
+        ms = Memspector(exclude_patterns=['.*'])
+        time_before = datetime.now()
+        ms.spectate('''
+def a(): return
+for _ in xrange(100000):
+    a()
+''')
+        time_after = datetime.now()
+        messages.append('Execution time of 100000 skipped function calls: {0}'
+                        .format(time_after - time_before))
         self.assertEqual(len(ms.memdata._diffs), 0)
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(exit=False)
+    print '\n'.join(messages)

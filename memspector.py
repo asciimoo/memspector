@@ -12,7 +12,6 @@ MAIN_THREAD_NAME = 'main_thread'
 
 
 def get_memory_usage():
-    gc.collect()
     return sum(map(getsizeof, gc.get_objects()))
 
 
@@ -53,10 +52,11 @@ class Memdata(object):
 
 class Memspector(object):
     """docstring for Memspector"""
-    def __init__(self, exclude_patterns=None):
+    def __init__(self, enable_gc=False, exclude_patterns=None):
         super(Memspector, self).__init__()
         self.memdata = Memdata()
         self.exclude_regex = None
+        self.enable_gc = enable_gc
         if exclude_patterns:
             self.exclude_regex = re.compile('({0})'.format(')|('.join(exclude_patterns)), re.U)
 
@@ -68,6 +68,8 @@ class Memspector(object):
             if self.exclude_regex.search(function_id):
                 return
         logging.debug("tracing %s", function_id)
+        if self.enable_gc:
+            gc.collect()
         self.memdata.add(thread_id, function_id, call_type)
 
     def thread_callback(self, *args):
@@ -116,6 +118,10 @@ def argparser():
                       type=unicode,
                       metavar='REGEX',
                       default=None)
+    argp.add_argument('-g', '--enable-gc',
+                      action='store_true',
+                      help='Collect garbage after each call - slower, but sometimes more accurate',
+                      default=False)
     argp.add_argument('-v', '--verbose',
                       action='store_true',
                       help='Verbose mode',
@@ -132,7 +138,7 @@ def __main():
     if args['verbose']:
         logging.basicConfig(level=logging.DEBUG)
 
-    spector = Memspector(args['exclude'])
+    spector = Memspector(args['enable-gc'], args['exclude'])
     spector.spectate(args['file'])
     spector.dump_diffs()
 

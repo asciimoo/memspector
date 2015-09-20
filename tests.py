@@ -2,7 +2,7 @@ from memspector import Memspector, MAIN_THREAD_NAME
 import unittest
 
 
-class TestMemspect(unittest.TestCase):
+class TestMemspector(unittest.TestCase):
 
     def test_spectate(self):
         ms = Memspector()
@@ -34,6 +34,11 @@ t1.join()
 t2.join()
 ''')
         self.assertEqual(len(ms.memdata._diffs), 3)
+
+    def test_exclude_all(self):
+        ms = Memspector(['.*'])
+        ms.spectate('1+1')
+        self.assertEqual(len(ms.memdata._diffs), 0)
 
 
 if __name__ == '__main__':

@@ -13,6 +13,12 @@ Features
 Check ``memspector --help`` for command line options
 
 
+Installation
+~~~~~~~~~~~~
+
+via pip: ``pip install memspector``
+
+
 Example
 ~~~~~~~
 

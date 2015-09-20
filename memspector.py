@@ -58,7 +58,7 @@ class Memspector(object):
         self.memdata = Memdata()
         self.exclude_regex = None
         if exclude_patterns:
-            self.exclude_regex = re.compile('({0})'.format(')|('.join(exclude_patterns)))
+            self.exclude_regex = re.compile('({0})'.format(')|('.join(exclude_patterns)), re.U)
 
     def main_callback(self, frame, call_type, frame_args, thread_id=MAIN_THREAD_NAME):
         if call_type.startswith('c_'):

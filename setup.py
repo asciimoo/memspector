@@ -20,7 +20,7 @@ setup(
         "Programming Language :: Python",
         "Topic :: Utilities",
         'Environment :: Console',
-        'License :: OSI Approved :: GNU General Public License v3'
+        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)'
     ],
     keywords='memory debugger inspector',
     author='Adam Tauber',

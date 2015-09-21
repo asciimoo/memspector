@@ -25,6 +25,19 @@ def get_function_id(frame):
                               function_name)
 
 
+def get_call_chain(frame):
+    parts = []
+    while True:
+        if not frame:
+            break
+        function_id = get_function_id(frame)
+        if function_id.endswith('memspector.py:spectate()'):
+            break
+        parts.append(function_id)
+        frame = frame.f_back
+    return ' => '.join(reversed(parts))
+
+
 def spawn_defaultdict(inner_type):
     def init_defaultdict():
         return defaultdict(inner_type)
@@ -52,18 +65,22 @@ class Memdata(object):
 
 class Memspector(object):
     """docstring for Memspector"""
-    def __init__(self, enable_gc=False, exclude_patterns=None):
+    def __init__(self, enable_gc=False, exclude_patterns=None, full_call_chain=False):
         super(Memspector, self).__init__()
         self.memdata = Memdata()
         self.exclude_regex = None
         self.enable_gc = enable_gc
+        self.full_call_chain = full_call_chain
         if exclude_patterns:
             self.exclude_regex = re.compile('({0})'.format(')|('.join(exclude_patterns)), re.U)
 
     def main_callback(self, frame, call_type, frame_args, thread_id=MAIN_THREAD_NAME):
         if call_type.startswith('c_'):
             return
-        function_id = get_function_id(frame)
+        if self.full_call_chain:
+            function_id = get_call_chain(frame)
+        else:
+            function_id = get_function_id(frame)
         if self.exclude_regex:
             if self.exclude_regex.search(function_id):
                 return
@@ -118,6 +135,10 @@ def argparser():
                       type=unicode,
                       metavar='REGEX',
                       default=None)
+    argp.add_argument('-c', '--call-chain',
+                      action='store_true',
+                      help='Display full function call chain',
+                      default=False)
     argp.add_argument('-g', '--enable-gc',
                       action='store_true',
                       help='Collect garbage after each call - slower, but sometimes more accurate',
@@ -139,7 +160,8 @@ def __main():
         logging.basicConfig(level=logging.DEBUG)
 
     spector = Memspector(enable_gc=args['enable_gc'],
-                         exclude_patterns=args['exclude'])
+                         exclude_patterns=args['exclude'],
+                         full_call_chain=args['call_chain'])
     spector.spectate(args['file'])
     spector.dump_diffs()
 

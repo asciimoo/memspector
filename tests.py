@@ -5,7 +5,6 @@ from datetime import datetime
 
 messages = []
 
-
 class TestMemspector(unittest.TestCase):
 
     def test_spectate(self):
@@ -53,7 +52,7 @@ for _ in xrange(1000):
     a()
 ''')
         time_after = datetime.now()
-        messages.append('Execution time of 1000 function calls with gc: {0}'
+        messages.append('Execution time of 1000 function calls with forced gc_collect: {0}'
                         .format(time_after - time_before))
         self.assertEqual(len(ms.memdata._diffs[MAIN_THREAD_NAME]['<string>:a()']), 1000)
 
@@ -82,6 +81,14 @@ for _ in xrange(100000):
         messages.append('Execution time of 100000 skipped function calls: {0}'
                         .format(time_after - time_before))
         self.assertEqual(len(ms.memdata._diffs), 0)
+
+    def test_full_call_chain(self):
+        ms = Memspector(full_call_chain=True)
+        ms.spectate('''
+def a(): return
+a()
+''')
+        self.assertEqual(len(ms.memdata._diffs[MAIN_THREAD_NAME]['<string> => <string>:a()']), 1)
 
 
 if __name__ == '__main__':

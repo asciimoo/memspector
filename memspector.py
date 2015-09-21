@@ -138,7 +138,8 @@ def __main():
     if args['verbose']:
         logging.basicConfig(level=logging.DEBUG)
 
-    spector = Memspector(args['enable_gc'], args['exclude'])
+    spector = Memspector(enable_gc=args['enable_gc'],
+                         exclude_patterns=args['exclude'])
     spector.spectate(args['file'])
     spector.dump_diffs()
 

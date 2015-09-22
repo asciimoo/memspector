@@ -1,9 +1,9 @@
 import gc
 import logging
 import re
+import sys
 
 from collections import defaultdict
-from sys import setprofile, getsizeof, stdout
 from threading import current_thread, setprofile as threading_setprofile
 from traceback import print_exc
 
@@ -12,7 +12,7 @@ MAIN_THREAD_NAME = 'main_thread'
 
 
 def get_memory_usage():
-    return sum(map(getsizeof, gc.get_objects()))
+    return sum(map(sys.getsizeof, gc.get_objects()))
 
 
 def get_function_id(frame):
@@ -42,7 +42,6 @@ def spawn_defaultdict(inner_type):
     def init_defaultdict():
         return defaultdict(inner_type)
     return init_defaultdict
-
 
 
 class Memdata(object):
@@ -93,14 +92,16 @@ class Memspector(object):
     def thread_callback(self, *args):
         return self.main_callback(*args, thread_id=current_thread().name)
 
-    def spectate(self, expr, globals=None, locals=None):
+    def spectate(self, expr, args=None, globals=None, locals=None):
         if globals is None:
             import __main__
             globals = __main__.__dict__
         if locals is None:
             locals = globals
+        if args:
+            globals['sys'].argv = args
         threading_setprofile(self.thread_callback)
-        setprofile(self.main_callback)
+        sys.setprofile(self.main_callback)
         exception_occured = False
         try:
             if expr.endswith('.py'):
@@ -112,7 +113,7 @@ class Memspector(object):
         except:
             print '[!] command interrupted'
         finally:
-            setprofile(None)
+            sys.setprofile(None)
             threading_setprofile(None)
         if exception_occured:
             print '[!] Exception occured'
@@ -141,7 +142,7 @@ def argparser():
     argp.add_argument('-o', '--output',
                       type=argparse.FileType('w'),
                       help='Output file - default: STDOUT',
-                      default=stdout)
+                      default=sys.stdout)
     argp.add_argument('-v', '--verbose',
                       action='store_true',
                       help='Verbose mode',
@@ -155,7 +156,13 @@ def argparser():
     argp.add_argument('file',
                       metavar='FILE',
                       help='Target python file')
-    return vars(argp.parse_args())
+    argp.add_argument('file-args',
+                      metavar='ARG1 ARG2',
+                      nargs=argparse.REMAINDER,
+                      help='Optional target arguments')
+    args = vars(argp.parse_args())
+    args['file-args'] = [args['file']] + args['file-args']
+    return args
 
 
 def __main():
@@ -167,7 +174,7 @@ def __main():
     spector = Memspector(enable_gc=args['enable_gc'],
                          exclude_patterns=args['exclude'],
                          full_call_chain=args['call_chain'])
-    spector.spectate(args['file'])
+    spector.spectate(args['file'], args['file-args'])
     spector.dump_diffs(output=args['output'])
 
 

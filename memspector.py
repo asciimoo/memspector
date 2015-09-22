@@ -1,9 +1,9 @@
 import gc
-import re
 import logging
+import re
 
 from collections import defaultdict
-from sys import setprofile, getsizeof
+from sys import setprofile, getsizeof, stdout
 from threading import current_thread, setprofile as threading_setprofile
 from traceback import print_exc
 
@@ -42,6 +42,7 @@ def spawn_defaultdict(inner_type):
     def init_defaultdict():
         return defaultdict(inner_type)
     return init_defaultdict
+
 
 
 class Memdata(object):
@@ -117,24 +118,18 @@ class Memspector(object):
             print '[!] Exception occured'
             print_exc()
 
-    def dump_diffs(self):
+    def dump_diffs(self, output):
         for thread_name, thread_data in self.memdata._diffs.iteritems():
             for fn_name, fn_data in thread_data.iteritems():
-                print '{0:<60} thread: {1}'.format(fn_name, thread_name)
-                print '{0:^15}{1:^15}'.format('total memory', 'diff')
-                print '\n'.join('{0:15,}{1:15,}'.format(*x) for x in fn_data)
-                print
+                output.write('{0:<60} thread: {1}\n'.format(fn_name, thread_name))
+                output.write('{0:^15}{1:^15}\n'.format('total memory', 'diff'))
+                output.write('\n'.join('{0:15,}{1:15,}'.format(*x) for x in fn_data))
+                output.write('\n\n')
 
 
 def argparser():
     import argparse
     argp = argparse.ArgumentParser(description='memspector - inspect memory usage of python functions')
-    argp.add_argument('-x', '--exclude',
-                      help='Regex to filter out unwanted functions',
-                      action='append',
-                      type=unicode,
-                      metavar='REGEX',
-                      default=None)
     argp.add_argument('-c', '--call-chain',
                       action='store_true',
                       help='Display full function call chain',
@@ -143,10 +138,20 @@ def argparser():
                       action='store_true',
                       help='Collect garbage after each call - slower, but sometimes more accurate',
                       default=False)
+    argp.add_argument('-o', '--output',
+                      type=argparse.FileType('w'),
+                      help='Output file - default: STDOUT',
+                      default=stdout)
     argp.add_argument('-v', '--verbose',
                       action='store_true',
                       help='Verbose mode',
                       default=False)
+    argp.add_argument('-x', '--exclude',
+                      help='Regex to filter out unwanted functions',
+                      action='append',
+                      type=unicode,
+                      metavar='REGEX',
+                      default=None)
     argp.add_argument('file',
                       metavar='FILE',
                       help='Target python file')
@@ -163,7 +168,7 @@ def __main():
                          exclude_patterns=args['exclude'],
                          full_call_chain=args['call_chain'])
     spector.spectate(args['file'])
-    spector.dump_diffs()
+    spector.dump_diffs(output=args['output'])
 
 
 if __name__ == '__main__':
